@@ -1,0 +1,34 @@
+SELECT price_name,SUM(increase) AS sum_of_increase_or_decrease, COUNT(1)  AS count_of_meassure
+FROM (
+      SELECT ftb.category_code,
+             ftb.year AS actual,
+             ftb.price_name,
+             ftb.price_for_year AS actual_price,
+             ftb.year AS ref,
+             ftb.price_for_year AS ref_price,
+             ftb.price_for_year/stb.price_for_year AS year_one_year,
+             ftb.price_for_year/stb.price_for_year - 1 AS increase
+      FROM
+            (  
+            SELECT category_code,price_name, 
+                   year, 
+                   AVG(price_value) AS price_for_year
+            FROM t_martin_beran_project_SQL_primary_final
+            GROUP BY 1,2,3
+            ORDER BY 3,1
+            ) AS ftb 
+ INNER JOIN 
+           (
+           SELECT category_code,
+                  price_name, 
+                  year,
+                  year +1 AS plusyear, 
+                  AVG(price_value) AS price_for_year
+           FROM t_martin_beran_project_SQL_primary_final
+           GROUP BY 1,2,3,4
+           ORDER BY 3,1) AS stb 
+      ON stb.plusyear = ftb.year
+      AND stb.category_code = ftb.category_code
+      )
+ GROUP BY 1
+ ORDER BY 2

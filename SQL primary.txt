@@ -1,0 +1,50 @@
+CREATE TABLE t_martin_beran_project_SQL_primary_final AS     
+SELECT
+       cp.category_code,
+       cp.datef AS year,
+       cp.region_code,
+       cp.price_value,
+       cpay.value AS salary,
+       ind.name AS industry_name,
+       ind.code AS industry_code,
+       czcat.name AS price_name,
+       czcat.price_value AS unit,
+       czcat.price_unit AS unit_of_meesurement,
+       czreg.name AS region
+FROM             
+		(
+    	  SELECT category_code, 
+    	         datef, 
+    	         region_code, 
+    	         avg(value) AS price_value
+ 		  FROM 
+ 		  (
+  				SELECT DISTINCT     
+ 				       value, 
+ 				       category_code, 
+ 				       date_part('year', date_from) AS datef,
+ 				       date_part('year',date_to) AS datet, 
+ 				       region_code
+				FROM czechia_price
+		   ) AS result_price
+		   WHERE region_code IS NOT NULL 
+		   GROUP BY category_code,
+		            datef, 
+		            region_code
+         ) AS cp
+JOIN
+        (
+	     SELECT * 
+	     FROM czechia_payroll 
+	     WHERE value_type_code = 5958 
+	           AND calculation_code = '100' 
+	           AND payroll_quarter = '4'
+         ) AS cpay
+ON cp.datef = cpay.payroll_year
+LEFT JOIN czechia_payroll_industry_branch ind 
+ON ind.code = cpay.industry_branch_code
+LEFT JOIN czechia_price_category czcat
+ON czcat.code = cp.category_code
+LEFT JOIN czechia_region czreg
+ON czreg.code = cp.region_code				 
+				 

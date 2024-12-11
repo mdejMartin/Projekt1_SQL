@@ -1,0 +1,12 @@
+CREATE TABLE t_martin_beran_project_SQL_secondary_final AS   
+  SELECT etb.year,
+         etb.country,
+         etb.gdp,
+         etb.population AS population_as_year, 
+         etb.gini 
+  FROM countries AS ctb
+  INNER JOIN economies AS etb
+  ON ctb.country = etb.country
+  WHERE (etb.YEAR BETWEEN (SELECT MIN(year) FROM t_martin_beran_project_SQL_primary_final)  
+                 AND (SELECT MAX(year) FROM t_martin_beran_project_SQL_primary_final))
+        		 AND ctb.continent = 'Europe'

@@ -1,0 +1,55 @@
+ SELECT s2tb.year, 
+       s2tb.actual_salary/s2tb.REF_salary AS change_salary, 
+       p2tb.actual_price/p2tb.ref_price AS change_price,
+       (p2tb.actual_price/p2tb.ref_price) - (s2tb.actual_salary/s2tb.REF_salary) AS change_salary_price
+FROM
+      (
+        SELECT ptb.year, 
+	           sum(ptb.price_product) AS actual_price, 
+	           sum(ptb.price_product2) AS ref_price 
+        FROM
+              (
+               SELECT year, 
+                      year  AS year2,
+                      AVG(price_value) AS price_product, 
+                      0 AS price_product2
+               FROM t_martin_beran_project_SQL_primary_final
+               GROUP BY year
+        UNION ALL
+               SELECT year + 1, 
+                      year  AS year2,
+                      0 AS price_product, 
+                      AVG(price_value) AS price_product2
+               FROM t_martin_beran_project_SQL_primary_final
+               GROUP BY year
+               ) AS ptb
+         GROUP BY 1
+         HAVING SUM(ptb.price_product2) > 0 
+                AND  SUM(ptb.price_product) > 0
+         ) AS p2tb
+INNER JOIN 
+        (
+          SELECT stb.year, 
+	             sum(stb.salary) AS actual_salary, 
+	             sum(stb.salary2) AS ref_salary
+          FROM
+                (
+                 SELECT year, 
+                        year  AS year2,
+                        AVG(salary) AS salary, 
+                        0 AS salary2
+                 FROM t_martin_beran_project_SQL_primary_final
+                 GROUP BY year
+           UNION ALL
+                 SELECT year + 1, 
+                        year  AS year2,
+                        0 AS salary, 
+                        AVG(salary) AS salary2
+                 FROM t_martin_beran_project_SQL_primary_final
+                 GROUP BY year
+                ) AS stb
+           GROUP BY 1
+           HAVING SUM(stb.salary2) > 0 
+                  AND  SUM(stb.salary) > 0
+           ) AS s2tb
+ON s2tb.YEAR = p2tb.year

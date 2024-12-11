@@ -1,0 +1,110 @@
+SELECT gdp.year, 
+       gdp.ref_gdp, 
+       gdp.actual_gdp, 
+       gdp.actual_gdp/ref_gdp AS increase_gdp, 
+       salary.ref_salary, 
+       salary.actual_salary, 
+       salary.actual_salary/salary.ref_salary AS increase_salary, 
+       price.ref_price, 
+       price.actual_price,
+       price.actual_price/price.ref_price AS increase_price,
+       price.back_price,
+       price.back_price/actual_price AS increase_next_year_price,
+       salary.back_salary,
+       salary.back_salary/salary.actual_salary AS increase_next_year_salary
+FROM   ( 
+        SELECT year,
+               SUM(ref_gdp) AS ref_gdp, 
+               SUM(actual_gdp) AS actual_gdp
+        FROM
+               (
+                   SELECT country AS cn, 
+                          year AS year, 
+                          gdp AS actual_gdp, 
+                          0 AS ref_gdp 
+                   FROM t_martin_beran_project_SQL_secondary_final
+                   WHERE country = 'Czech Republic'                        
+                   UNION ALL 
+                   SELECT country AS cn,
+                           year + 1 AS year, 0 AS actual_gdp, gdp AS ref_gdp 
+                 FROM t_martin_beran_project_SQL_secondary_final
+                 WHERE country = 'Czech Republic'
+                 ) AS gdp_tb
+                 GROUP BY 1
+        ) AS gdp        
+INNER JOIN 
+        (
+        SELECT year,
+               sum(ref) AS ref_salary, 
+               sum(actual) as actual_salary,
+               sum(back_ref_salary) AS back_salary
+        FROM
+                 (
+                   SELECT year AS year,
+                          AVG(salary) AS actual,
+                          0 AS REF,
+                          0 AS back_ref_salary
+                   FROM t_martin_beran_project_SQL_primary_final
+                   GROUP BY 1                        
+                   UNION ALL
+                   SELECT year + 1 AS year,
+                          0 AS actual,
+                          AVG(salary) AS REF,
+                          0 AS back_ref_salary
+                   FROM t_martin_beran_project_SQL_primary_final
+                   GROUP BY 1
+                   UNION all
+                   SELECT YEAR - 1 AS year,
+                          0 AS actual,
+                          0 AS REF,
+                          AVG(salary) AS back_ref_salary
+                   FROM t_martin_beran_project_SQL_primary_final
+                   GROUP BY 1
+                 ) AS salary_tb
+                 GROUP BY 1             
+                 ORDER BY 1
+         ) AS salary   
+ON salary.year = gdp.year             
+INNER JOIN 
+        (                          
+         SELECT year,
+                sum(ref) AS ref_price, 
+                sum(actual) AS actual_price, 
+                sum(back_ref) AS back_price
+         FROM
+                   (
+                 	SELECT year AS year,
+                 	       AVG(price_value) AS actual,
+                 	       0 AS REF, 
+                 	       0 AS back_ref
+                    FROM t_martin_beran_project_SQL_primary_final
+                    GROUP BY 1                        
+                    UNION ALL
+                    SELECT year+ 1 AS year,
+                           0 AS actual,
+                           AVG(price_value) AS REF,
+                           0 AS back_ref
+                   FROM t_martin_beran_project_SQL_primary_final
+                   GROUP BY 1
+                   UNION all
+                   SELECT YEAR - 1 AS year,
+                           0 AS actual,
+                           0 AS REF,
+                           avg(price_value) AS back_ref
+                   FROM t_martin_beran_project_SQL_primary_final
+                   GROUP BY 1
+                   ) AS price_tb
+                 GROUP BY 1             
+                 ORDER BY 1         
+        ) AS price
+ON price.year = gdp.year
+WHERE gdp.ref_gdp > 0 AND
+      gdp.actual_gdp > 0 AND
+      salary.ref_salary > 0 AND
+      salary.actual_salary > 0 AND
+      price.ref_price > 0 AND
+      price.actual_price > 0 AND 
+      price.back_price  > 0 AND 
+      salary.back_salary > 0 AND 
+      gdp.actual_gdp/gdp.ref_gdp > 1.05
+      

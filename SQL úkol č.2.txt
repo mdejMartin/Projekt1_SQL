@@ -1,0 +1,29 @@
+SELECT tpr.year, 
+       tsa.salary, 
+       tpr.price_name,
+       round(tpr.price_product::NUMERIC,2) AS price_product, 
+       round(tsa.salary/tpr.price_product::NUMERIC,2) AS count_product,
+       tpr.unit_of_meesurement 
+FROM (
+       SELECT price_name,
+              year,
+              unit_of_meesurement,
+              AVG(price_value) AS price_product
+       FROM t_martin_beran_project_SQL_primary_final
+       WHERE (price_name LIKE 'Ml%' OR price_name LIKE 'Chl%')  AND 
+             YEAR IN ((SELECT min(year) FROM t_martin_beran_project_SQL_primary_final),
+                     (SELECT max(year) FROM t_martin_beran_project_SQL_primary_final))
+       GROUP BY price_name, 
+                year,
+                unit_of_meesurement
+      ) AS tpr
+ INNER JOIN 
+      (SELECT year,
+               AVG(salary) AS salary  
+       FROM t_martin_beran_project_SQL_primary_final
+       WHERE year IN ((SELECT min(year) FROM t_martin_beran_project_SQL_primary_final),
+                     (SELECT max(year) FROM t_martin_beran_project_SQL_primary_final))
+       GROUP BY  year
+      ) AS tsa
+ ON tpr.year = tsa.year
+ ORDER BY 3,1

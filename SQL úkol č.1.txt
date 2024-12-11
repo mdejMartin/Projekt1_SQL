@@ -1,0 +1,87 @@
+SELECT 
+        salary_for_each_years.industry_name,
+        salary_for_each_years.YEAR,
+ 		salary_for_each_years.actual,
+		salary_for_each_years.year_ago,
+		salary_for_each_years.year_on_year,
+	    year_decrease.decrease AS decrease_for_years,
+		salary_for_period.salary_of_start_end_period
+FROM    (
+        SELECT ftab.industry_name, 
+	   		   stab.year , 
+	   		   stab.actual, 
+	   		   ftab.year_ago, 
+	   		   stab.actual/ftab.year_ago AS year_on_year
+        FROM   (
+ 		         SELECT distinct year + 1 AS last_year, 
+ 		                industry_name, 
+ 		                industry_code, 
+ 		                CAST(SALARY AS NUMERIC) AS year_ago
+ 		         FROM t_martin_beran_project_SQL_primary_final
+	            ) AS ftab
+        inner JOIN 
+		       (
+ 		         SELECT DISTINCT year, 
+ 		                industry_name,
+ 		                industry_code, 
+ 		                CAST(salary AS NUMERIC) AS actual
+ 		         FROM t_martin_beran_project_SQL_primary_final
+ 		       ) AS stab
+        ON ftab.last_year = stab.year 
+        AND stab.industry_code = ftab.industry_code
+        ORDER BY 1,2,3,4
+ ) AS salary_for_each_years 
+ LEFT JOIN (
+  			SELECT industry_name,avg(salary_first) AS fyear, 
+  			       avg(salary_second) AS lyear,
+  			       avg(salary_second)/avg(salary_first) AS salary_of_start_end_period
+            FROM (      
+                   SELECT YEAR,
+                          industry_name,
+                          AVG(salary) AS salary_first,
+                          0 AS salary_second
+                   FROM t_martin_beran_project_SQL_primary_final
+                   WHERE YEAR IN ((SELECT MIN(year) FROM t_martin_beran_project_SQL_primary_final) )                   
+                   GROUP BY  YEAR,
+                             industry_name
+                   UNION ALL 
+                   SELECT YEAR,
+                          industry_name,
+                          0 AS salary_first,
+                          AVG(salary) AS salary_second  
+                   FROM t_martin_beran_project_SQL_primary_final
+                   WHERE YEAR IN ((SELECT MAX(year) FROM t_martin_beran_project_SQL_primary_final) )
+                   GROUP BY  YEAR,
+                             industry_name
+                  ) AS chtb
+             GROUP BY industry_name      
+           ) AS salary_for_period 
+ON salary_for_period.industry_name = salary_for_each_years.industry_name
+LEFT JOIN 
+        (   SELECT ftab.industry_name, 
+	   	 	SUM(CASE 
+	   		        WHEN stab.actual/ftab.year_ago > 1
+	   		        THEN 0
+	   		        ELSE 1
+	   	         END ) AS decrease
+        FROM   (
+ 		         SELECT distinct year + 1 AS last_year, 
+ 		                industry_name, 
+ 		                industry_code, 
+ 		                CAST(SALARY AS NUMERIC) AS year_ago
+ 		         FROM t_martin_beran_project_SQL_primary_final
+	            ) AS ftab
+        inner JOIN 
+		       (
+ 		         SELECT DISTINCT year, 
+ 		                industry_name,
+ 		                industry_code, 
+ 		                CAST(salary AS NUMERIC) AS actual
+ 		         FROM t_martin_beran_project_SQL_primary_final
+ 		       ) AS stab
+        ON ftab.last_year = stab.year 
+        AND stab.industry_code = ftab.industry_code
+        GROUP BY 1
+        ) AS year_decrease 
+ON year_decrease.industry_name = salary_for_each_years.industry_name
+ORDER BY 2
